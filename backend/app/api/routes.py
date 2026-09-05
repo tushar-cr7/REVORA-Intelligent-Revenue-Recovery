@@ -10,6 +10,9 @@ from backend.app.api.schemas import (
     PolicySimulateRequest,
     PolicySimulateResponse,
     ForceRetryBlockResponse,
+    InterventionsResponse,
+    EscalationsResponse,
+    AnalyticsResponse,
 )
 from backend.app.domain.policy import DEFAULT_POLICY, PolicyLimits
 from backend.app.repositories.in_memory import repo
@@ -100,6 +103,24 @@ def recover_revenue():
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Recovery failed: {str(e)}")
+
+
+@router.get("/interventions", response_model=InterventionsResponse)
+def get_interventions(limit: int = Query(default=100, ge=1, le=1000)):
+    interventions = recovery_service.get_interventions(limit=limit)
+    return InterventionsResponse(total=len(interventions), interventions=interventions)
+
+
+@router.get("/escalations", response_model=EscalationsResponse)
+def get_escalations(limit: int = Query(default=50, ge=1, le=1000)):
+    escalations = recovery_service.get_escalations(limit=limit)
+    return EscalationsResponse(total=len(escalations), escalations=escalations)
+
+
+@router.get("/analytics", response_model=AnalyticsResponse)
+def get_analytics():
+    stats = recovery_service.get_analytics_summary()
+    return AnalyticsResponse(**stats)
 
 
 @router.get("/audit", response_model=AuditLogResponse)

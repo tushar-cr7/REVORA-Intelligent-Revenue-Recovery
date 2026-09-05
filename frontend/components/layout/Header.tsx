@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ShieldCheck, RefreshCw, Bell, ChevronDown, Sparkles, Activity } from 'lucide-react';
+import { ShieldCheck, RefreshCw, Bell, ChevronDown, Sparkles } from 'lucide-react';
 
 interface HeaderProps {
   onScan: () => void;

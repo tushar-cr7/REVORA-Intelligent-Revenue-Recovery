@@ -178,3 +178,24 @@ export interface ForceRetryBlockResponse {
   policy_reason: string;
   final_action: string;
 }
+
+export interface InterventionsResponse {
+  total: number;
+  interventions: Intervention[];
+}
+
+export interface EscalationsResponse {
+  total: number;
+  escalations: Decision[];
+}
+
+export interface AnalyticsResponse {
+  total_at_risk: number;
+  total_recovered: number;
+  recovery_rate_pct: number;
+  recovered_count: number;
+  attempted_count: number;
+  intervention_success_rate_pct: number;
+  policy_blocked_count: number;
+  escalation_count: number;
+}

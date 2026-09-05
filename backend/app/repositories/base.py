@@ -37,6 +37,14 @@ class BaseRepository(ABC):
         pass
 
     @abstractmethod
+    def get_all_interventions(self) -> List[Intervention]:
+        pass
+
+    @abstractmethod
+    def get_escalations(self) -> List[Decision]:
+        pass
+
+    @abstractmethod
     def save_audit_event(self, event: AuditEvent):
         pass
 

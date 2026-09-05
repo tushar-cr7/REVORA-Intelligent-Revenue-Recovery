@@ -10,6 +10,9 @@ import {
   PolicyLimits,
   SimulateResponse,
   ForceRetryBlockResponse,
+  InterventionsResponse,
+  EscalationsResponse,
+  AnalyticsResponse,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -95,4 +98,13 @@ export const api = {
     fetchJson<ForceRetryBlockResponse>('/api/demo/force-retry-block', {
       method: 'POST',
     }),
+
+  getInterventions: (limit: number = 100) =>
+    fetchJson<InterventionsResponse>(`/api/interventions?limit=${limit}`),
+
+  getEscalations: (limit: number = 50) =>
+    fetchJson<EscalationsResponse>(`/api/escalations?limit=${limit}`),
+
+  getAnalytics: () =>
+    fetchJson<AnalyticsResponse>('/api/analytics'),
 };

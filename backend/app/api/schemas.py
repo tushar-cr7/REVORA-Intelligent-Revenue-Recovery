@@ -71,3 +71,24 @@ class ForceRetryBlockResponse(BaseModel):
     policy_allowed: bool
     policy_reason: str
     final_action: str
+
+
+class InterventionsResponse(BaseModel):
+    total: int
+    interventions: List[Dict[str, Any]]
+
+
+class EscalationsResponse(BaseModel):
+    total: int
+    escalations: List[Dict[str, Any]]
+
+
+class AnalyticsResponse(BaseModel):
+    total_at_risk: float
+    total_recovered: float
+    recovery_rate_pct: float
+    recovered_count: int
+    attempted_count: int
+    intervention_success_rate_pct: float
+    policy_blocked_count: int
+    escalation_count: int

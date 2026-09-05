@@ -222,6 +222,41 @@ class RecoveryService:
         decision = self.repo.get_decision(key)
         return decision.to_dict() if decision else None
 
+    def get_interventions(self, limit: int = 100) -> List[Dict[str, Any]]:
+        interventions = self.repo.get_all_interventions()
+        return [i.to_dict() for i in interventions[:limit]]
+
+    def get_escalations(self, limit: int = 50) -> List[Dict[str, Any]]:
+        escalations = self.repo.get_escalations()
+        return [e.to_dict() for e in escalations[:limit]]
+
+    def get_analytics_summary(self) -> Dict[str, Any]:
+        transactions = self.repo.get_all_transactions()
+        total_at_risk = round(sum(tx.amount for tx in transactions), 2)
+        
+        interventions = self.repo.get_all_interventions()
+        total_recovered = sum(i.amount for i in interventions if i.recovered)
+        
+        recovered_count = sum(1 for i in interventions if i.recovered)
+        attempted_count = sum(1 for i in interventions if i.final_action in ("retry", "payment_link", "reminder"))
+        
+        decisions = self.repo.get_all_decisions() if hasattr(self.repo, 'get_all_decisions') else []
+        blocked_count = sum(1 for d in decisions if not d.policy_allowed)
+        
+        escalations = self.repo.get_escalations()
+        escalation_count = len(escalations)
+
+        return {
+            "total_at_risk": total_at_risk,
+            "total_recovered": total_recovered,
+            "recovery_rate_pct": round(100 * total_recovered / total_at_risk, 2) if total_at_risk else 0,
+            "recovered_count": recovered_count,
+            "attempted_count": attempted_count,
+            "intervention_success_rate_pct": round(100 * recovered_count / attempted_count, 2) if attempted_count else 0,
+            "policy_blocked_count": blocked_count,
+            "escalation_count": escalation_count
+        }
+
     def execute_individual_intervention(
         self, target_id: str, idempotency_key: Optional[str] = None
     ) -> Dict[str, Any]:

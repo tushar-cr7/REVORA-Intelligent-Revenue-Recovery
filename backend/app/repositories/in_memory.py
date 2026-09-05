@@ -64,6 +64,16 @@ class InMemoryRepository(BaseRepository):
         with self._lock:
             return self._idempotency_map.get(key)
 
+    def get_all_interventions(self) -> List[Intervention]:
+        with self._lock:
+            unique = {i.intervention_id: i for i in self._interventions.values()}
+            return list(unique.values())
+
+    def get_escalations(self) -> List[Decision]:
+        with self._lock:
+            unique = {d.decision_id: d for d in self._decisions.values() if d.final_action == "escalate"}
+            return list(unique.values())
+
     def save_audit_event(self, event: AuditEvent):
         with self._lock:
             self._audit_log.append(event)
