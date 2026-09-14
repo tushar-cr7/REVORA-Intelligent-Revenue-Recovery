@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { FileSpreadsheet, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { History, ShieldCheck, ShieldAlert, CheckCircle2, AlertTriangle, Layers } from 'lucide-react';
 import { formatINR, formatTimeAgo } from '@/lib/format';
 import { AuditEvent } from '@/lib/types';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AuditLedgerTableProps {
   auditLog: AuditEvent[];
@@ -11,98 +12,114 @@ interface AuditLedgerTableProps {
 
 export const AuditLedgerTable: React.FC<AuditLedgerTableProps> = ({ auditLog }) => {
   return (
-    <div className="bg-panel border border-border-subtle rounded-md p-4 shadow-panel">
+    <div className="bg-panel border border-border-strong rounded-xl p-5 shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-border-divider">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-6 h-6 rounded bg-surface border border-border-strong flex items-center justify-center text-text-secondary">
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-          </div>
+      <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
+        <div className="flex items-center space-x-3">
+          <History strokeWidth={1.75} className="w-4 h-4 text-text-muted shrink-0" />
           <div>
-            <h3 className="text-text-primary text-sm font-semibold tracking-tight">Audit Trail Ledger</h3>
-            <p className="text-text-muted text-xs">Verifiable, immutable-style record of all decisions, policy gates, & outcomes</p>
+            <h3 className="text-text-primary text-[14px] font-medium tracking-wide">Audit Trail Ledger</h3>
+            <p className="text-text-muted text-[12px] mt-0.5">Verifiable, immutable-style record of all decisions, policy gates, & outcomes</p>
           </div>
         </div>
-        <span className="text-xs font-mono text-text-muted bg-surface px-2 py-0.5 rounded border border-border-subtle">
-          Total Logged: {auditLog.length} events
-        </span>
+        <div className="flex items-center space-x-2 text-[12px] font-mono text-text-muted bg-surface px-3 py-1 rounded-full border border-border-subtle shadow-inner">
+          <Layers className="w-3.5 h-3.5" />
+          <span>{auditLog.length} events logged</span>
+        </div>
       </div>
 
       {/* Ledger Table */}
-      <div className="mt-3 overflow-x-auto">
+      <div className="mt-4 overflow-x-auto custom-scrollbar pb-2">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-border-divider text-[11px] font-mono text-text-muted uppercase">
-              <th className="py-2.5 px-3">Event ID & Timestamp</th>
-              <th className="py-2.5 px-3">Transaction</th>
-              <th className="py-2.5 px-3">Event Type</th>
-              <th className="py-2.5 px-3 font-center">Action</th>
-              <th className="py-2.5 px-3">Policy Gate</th>
-              <th className="py-2.5 px-3 text-right">Outcome / Amount</th>
+            <tr className="border-b border-border-subtle text-[11px] font-mono text-text-muted uppercase tracking-wider">
+              <th className="py-3 px-4 font-medium">Event & Time</th>
+              <th className="py-3 px-4 font-medium">Transaction</th>
+              <th className="py-3 px-4 font-medium">Event Type</th>
+              <th className="py-3 px-4 font-medium">Action</th>
+              <th className="py-3 px-4 font-medium">Safety Gate</th>
+              <th className="py-3 px-4 font-medium text-right">Outcome</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-divider text-xs font-mono">
+          <tbody className="text-[13px]">
             {auditLog.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-text-muted italic font-sans">
-                  No audit log entries recorded yet.
+                <td colSpan={6} className="py-12 text-center text-text-muted border-b border-dashed border-border-subtle">
+                  <div className="flex flex-col items-center">
+                    <History strokeWidth={1.5} className="w-8 h-8 text-text-muted/50 mb-3" />
+                    <span>No audit log entries recorded yet.</span>
+                  </div>
                 </td>
               </tr>
             ) : (
-              auditLog.map((evt) => (
-                <tr key={evt.event_id} className="hover:bg-panel-hover transition">
-                  {/* Event ID & Time */}
-                  <td className="py-3 px-3">
-                    <div className="text-text-primary font-medium">{evt.event_id}</div>
-                    <div className="text-[11px] text-text-muted font-sans">{formatTimeAgo(evt.timestamp)}</div>
-                  </td>
+              <AnimatePresence>
+                {auditLog.map((evt, idx) => (
+                  <motion.tr
+                    key={evt.event_id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05, duration: 0.2 }}
+                    className="border-b border-border-divider hover:bg-surface/50 transition-colors group"
+                  >
+                    {/* Event ID & Time */}
+                    <td className="py-3.5 px-4">
+                      <div className="flex flex-col space-y-1">
+                        <span className="font-mono text-text-primary text-[12px] font-medium tracking-tight truncate max-w-[140px] group-hover:text-primary-400 transition-colors" title={evt.event_id}>
+                          {evt.event_id}
+                        </span>
+                        <span className="text-[11px] text-text-muted">{formatTimeAgo(evt.timestamp)}</span>
+                      </div>
+                    </td>
 
-                  {/* Transaction */}
-                  <td className="py-3 px-3 text-primary-300 font-semibold">{evt.transaction_id}</td>
+                    {/* Transaction */}
+                    <td className="py-3.5 px-4 font-mono font-medium text-primary-400 tracking-tight">{evt.transaction_id}</td>
 
-                  {/* Event Type */}
-                  <td className="py-3 px-3">
-                    <span
-                      className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded ${
-                        evt.event_type === 'ACTION_BLOCKED'
-                          ? 'bg-risk-muted text-risk-300 border border-risk-500/30'
-                          : evt.event_type === 'EXECUTION_SUCCEEDED'
-                          ? 'bg-success-muted text-success-300 border border-success-500/30'
-                          : 'bg-surface text-text-secondary border border-border-subtle'
-                      }`}
-                    >
-                      {evt.event_type}
-                    </span>
-                  </td>
-
-                  {/* Action */}
-                  <td className="py-3 px-3 capitalize font-sans text-text-primary">{evt.action}</td>
-
-                  {/* Policy Gate */}
-                  <td className="py-3 px-3 font-sans">
-                    {evt.policy_result?.allowed ? (
-                      <span className="text-success-300 flex items-center space-x-1 text-[11px]">
-                        <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-                        <span>Allowed</span>
+                    {/* Event Type */}
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`inline-flex items-center justify-center font-mono text-[10px] font-bold px-2 py-0.5 rounded border tracking-wider uppercase ${
+                          evt.event_type === 'ACTION_BLOCKED'
+                            ? 'bg-risk-900/20 text-risk-400 border-risk-500/30'
+                            : evt.event_type === 'EXECUTION_SUCCEEDED'
+                            ? 'bg-success-900/20 text-success-400 border-success-500/30'
+                            : evt.event_type === 'ESCALATION_CREATED'
+                            ? 'bg-warning-900/20 text-warning-400 border-warning-500/30'
+                            : 'bg-surface text-text-secondary border-border-strong'
+                        }`}
+                      >
+                        {evt.event_type.replace(/_/g, ' ')}
                       </span>
-                    ) : (
-                      <span className="text-risk-300 flex items-center space-x-1 text-[11px]" title={evt.policy_result?.reason}>
-                        <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate max-w-[140px]">{evt.policy_result?.reason || 'Blocked'}</span>
-                      </span>
-                    )}
-                  </td>
+                    </td>
 
-                  {/* Outcome Amount */}
-                  <td className="py-3 px-3 text-right">
-                    {evt.outcome?.recovered_amount ? (
-                      <span className="font-bold text-success-300">+{formatINR(evt.outcome.recovered_amount)}</span>
-                    ) : (
-                      <span className="text-text-muted text-[11px] uppercase">{evt.outcome?.status || 'recorded'}</span>
-                    )}
-                  </td>
-                </tr>
-              ))
+                    {/* Action */}
+                    <td className="py-3.5 px-4 capitalize font-medium text-text-primary tracking-tight">{evt.action}</td>
+
+                    {/* Policy Gate */}
+                    <td className="py-3.5 px-4">
+                      {evt.policy_result?.allowed ? (
+                        <span className="inline-flex items-center space-x-1.5 text-[11px] font-medium text-success-400">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Allowed</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center space-x-1.5 text-[11px] font-medium text-risk-400" title={evt.policy_result?.reason}>
+                          <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate max-w-[140px]">{evt.policy_result?.reason || 'Blocked'}</span>
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Outcome Amount */}
+                    <td className="py-3.5 px-4 text-right">
+                      {evt.outcome?.recovered_amount ? (
+                        <span className="font-mono font-bold text-success-400 tracking-tight">+{formatINR(evt.outcome.recovered_amount)}</span>
+                      ) : (
+                        <span className="text-text-muted text-[11px] font-mono uppercase tracking-widest">{evt.outcome?.status || 'recorded'}</span>
+                      )}
+                    </td>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
             )}
           </tbody>
         </table>

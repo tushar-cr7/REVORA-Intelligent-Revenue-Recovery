@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { BrainCircuit, Cpu, Sparkles, RefreshCw, TrendingUp } from 'lucide-react';
+import { Network, Cpu, Sparkles, RefreshCw, TrendingUp } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AnalyzeResponse } from '@/lib/types';
 import { formatINR, formatPct } from '@/lib/format';
@@ -46,9 +46,7 @@ export default function RecoveryBrainPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-sm bg-ai-muted border border-ai-500/30 flex items-center justify-center text-ai-300">
-            <BrainCircuit className="w-4 h-4" />
-          </div>
+          <Network strokeWidth={1.75} className="w-5 h-5 text-text-muted shrink-0" />
           <div>
             <h2 className="text-xl font-semibold text-text-primary tracking-tight">Recovery Brain</h2>
             <p className="text-xs text-text-muted mt-0.5">Predictive ML model and expected value scoring engine</p>
@@ -71,7 +69,7 @@ export default function RecoveryBrainPage() {
 
       {!analyzeData && !loading && (
         <div className="bg-panel border border-border-subtle rounded-md p-10 text-center">
-          <BrainCircuit className="w-10 h-10 text-ai-500/50 mx-auto mb-3" />
+          <Network strokeWidth={1.5} className="w-10 h-10 text-ai-500/50 mx-auto mb-3" />
           <p className="text-text-muted text-sm">No intelligence data available.</p>
           <p className="text-text-muted text-xs mt-1">Run an intelligence pass to see model scores, proposed actions, and policy interactions.</p>
         </div>
@@ -168,7 +166,7 @@ export default function RecoveryBrainPage() {
           {/* Architecture Flow */}
           <div className="bg-panel border border-border-subtle rounded-md p-4">
             <h3 className="text-text-primary text-sm font-semibold mb-4 flex items-center space-x-2">
-              <BrainCircuit className="w-4 h-4 text-ai-300" />
+              <Network className="w-4 h-4 text-ai-300" />
               <span>Decision Architecture</span>
               <span className="ml-auto text-[10px] font-mono text-text-muted uppercase tracking-wider">AI for Intelligence · Rules for Control</span>
             </h3>

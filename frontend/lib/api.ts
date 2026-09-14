@@ -13,6 +13,7 @@ import {
   InterventionsResponse,
   EscalationsResponse,
   AnalyticsResponse,
+  CopilotResponse,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -107,4 +108,10 @@ export const api = {
 
   getAnalytics: () =>
     fetchJson<AnalyticsResponse>('/api/analytics'),
+
+  queryCopilot: (query: string, transaction_id?: string) =>
+    fetchJson<CopilotResponse>('/api/copilot/query', {
+      method: 'POST',
+      body: JSON.stringify({ query, transaction_id }),
+    }),
 };

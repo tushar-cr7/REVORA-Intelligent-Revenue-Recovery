@@ -5,76 +5,118 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
-  Radar,
-  BrainCircuit,
-  Receipt,
-  Zap,
-  ShieldCheck,
-  AlertTriangle,
-  FileSpreadsheet,
-  BarChart3,
-  Sliders,
+  ScanLine,
+  Network,
+  Rows3,
+  Crosshair,
+  SlidersHorizontal,
+  CircleAlert,
+  History,
+  TrendingUp,
+  Waypoints,
   Settings,
+  Sparkles,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-const navItems = [
-  { href: '/mission-control', label: 'Mission Control', icon: LayoutDashboard, pLevel: 'P0' },
-  { href: '/revenue-scanner', label: 'Revenue Scanner', icon: Radar, pLevel: 'P0' },
-  { href: '/recovery-brain', label: 'Recovery Brain', icon: BrainCircuit, pLevel: 'P0' },
-  { href: '/transactions', label: 'Transactions', icon: Receipt, pLevel: 'P0' },
-  { href: '/interventions', label: 'Interventions', icon: Zap, pLevel: 'P0' },
-  { href: '/policies', label: 'Policies & Guardrails', icon: ShieldCheck, pLevel: 'P0' },
-  { href: '/escalations', label: 'Escalations', icon: AlertTriangle, pLevel: 'P1' },
-  { href: '/audit', label: 'Audit Trail', icon: FileSpreadsheet, pLevel: 'P0' },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3, pLevel: 'P1' },
-  { href: '/integrations', label: 'Integrations', icon: Sliders, pLevel: 'P2' },
-  { href: '/settings', label: 'Settings', icon: Settings, pLevel: 'P2' },
+// One coherent icon per destination — geometric, restrained, and shared
+// with that page's own header icon (see each page.tsx) so the same symbol
+// means the same thing everywhere in the app, not a different pick per
+// context.
+const navGroups = [
+  {
+    title: 'Core',
+    items: [
+      { href: '/mission-control', label: 'Revenue Command', icon: LayoutDashboard },
+      { href: '/revenue-scanner', label: 'Revenue Scanner', icon: ScanLine },
+      { href: '/recovery-brain', label: 'Recovery Brain', icon: Network },
+      { href: '/transactions', label: 'Transactions', icon: Rows3 },
+    ]
+  },
+  {
+    title: 'Operations',
+    items: [
+      { href: '/interventions', label: 'Interventions', icon: Crosshair },
+      { href: '/policies', label: 'Recovery Controls', icon: SlidersHorizontal },
+      { href: '/escalations', label: 'Escalations', icon: CircleAlert },
+      { href: '/audit', label: 'Audit Trail', icon: History },
+    ]
+  },
+  {
+    title: 'Intelligence',
+    items: [
+      { href: '/analytics', label: 'Analytics', icon: TrendingUp },
+      { href: '/integrations', label: 'Integrations', icon: Waypoints },
+      { href: '/settings', label: 'Settings', icon: Settings },
+    ]
+  }
 ];
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 bg-surface border-r border-border-subtle flex flex-col justify-between shrink-0 hidden md:flex">
-      <div className="py-4 px-3 space-y-1">
-        <div className="px-3 pb-2">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">Navigation</span>
-        </div>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-sm text-xs font-medium transition ${
-                isActive
-                  ? 'bg-panel-raised text-text-primary border-l-2 border-primary-500 font-semibold'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-panel/50'
-              }`}
-            >
-              <div className="flex items-center space-x-2.5">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-primary-300' : 'text-text-muted'}`} />
-                <span>{item.label}</span>
-              </div>
-              {isActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
-              )}
-            </Link>
-          );
-        })}
+    <aside className="w-64 bg-surface border-r border-border-subtle flex flex-col justify-between shrink-0 hidden md:flex">
+      <div className="py-6 px-4 space-y-8 overflow-y-auto">
+        {navGroups.map((group, gIdx) => (
+          <div key={gIdx} className="space-y-2">
+            <h3 className="px-3 text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+              {group.title}
+            </h3>
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-[13px] font-medium transition-colors relative group ${
+                      isActive
+                        ? 'text-text-primary bg-panel-raised'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-panel/50'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Icon
+                        strokeWidth={1.75}
+                        className={`w-4 h-4 ${isActive ? 'text-primary-400' : 'text-text-muted group-hover:text-text-secondary'} transition-colors`}
+                      />
+                      <span>{item.label}</span>
+                    </div>
+                    {isActive && (
+                      <motion.div 
+                        layoutId="activeNav"
+                        className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-primary-500 rounded-r-full"
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Footer System Version */}
-      <div className="p-4 border-t border-border-divider">
-        <div className="bg-panel rounded-sm p-2.5 border border-border-subtle">
-          <div className="flex items-center justify-between text-[11px] font-mono text-text-muted">
-            <span>CORE ENGINE</span>
-            <span className="text-success-300">v1.0.0</span>
-          </div>
-          <p className="text-[10px] text-text-muted mt-1 leading-tight">
-            XGBoost ML + Deterministic Policy Limits
-          </p>
+      <div className="p-4 border-t border-border-subtle">
+        <div className="space-y-1 mb-4">
+          <Link
+            href="/copilot"
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
+              pathname.startsWith('/copilot')
+                ? 'text-text-primary bg-panel-raised'
+                : 'text-text-secondary hover:text-text-primary hover:bg-panel/50'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <Sparkles strokeWidth={1.75} className={`w-4 h-4 ${pathname.startsWith('/copilot') ? 'text-ai-400' : 'text-text-muted'}`} />
+              <span>AI Copilot</span>
+            </div>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-ai-500/20 text-ai-300 border border-ai-500/30">
+              BETA
+            </span>
+          </Link>
         </div>
       </div>
     </aside>

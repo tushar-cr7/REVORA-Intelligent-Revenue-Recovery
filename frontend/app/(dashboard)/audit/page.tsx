@@ -1,24 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileSpreadsheet, RefreshCw, ShieldCheck, ShieldAlert, Search, ChevronDown } from 'lucide-react';
+import { History, RefreshCw, ShieldCheck, ShieldAlert, Search, ChevronDown, Layers } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AuditEvent } from '@/lib/types';
 import { formatINR, formatTimeAgo } from '@/lib/format';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const EVENT_TYPES = [
   '', 'DECISION_CREATED', 'ACTION_BLOCKED', 'EXECUTION_SUCCEEDED',
   'EXECUTION_FAILED', 'ESCALATION_CREATED', 'SUPPRESSION_CREATED',
 ];
-
-const EVENT_META: Record<string, { color: string; bg: string }> = {
-  DECISION_CREATED:   { color: 'text-primary-300', bg: 'bg-primary-muted border-primary-500/30' },
-  ACTION_BLOCKED:     { color: 'text-risk-300',    bg: 'bg-risk-muted border-risk-500/30' },
-  EXECUTION_SUCCEEDED:{ color: 'text-success-300', bg: 'bg-success-muted border-success-500/30' },
-  EXECUTION_FAILED:   { color: 'text-risk-300',    bg: 'bg-risk-muted border-risk-500/30' },
-  ESCALATION_CREATED: { color: 'text-warning-300', bg: 'bg-warning-muted border-warning-500/30' },
-  SUPPRESSION_CREATED:{ color: 'text-text-muted',  bg: 'bg-surface border-border-subtle' },
-};
 
 export default function AuditPage() {
   const [auditLog, setAuditLog] = useState<AuditEvent[]>([]);
@@ -57,42 +49,44 @@ export default function AuditPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-sm bg-surface border border-border-strong flex items-center justify-center text-text-secondary">
-            <FileSpreadsheet className="w-4 h-4" />
-          </div>
+          <History strokeWidth={1.75} className="w-5 h-5 text-text-muted shrink-0" />
           <div>
-            <h2 className="text-xl font-semibold text-text-primary tracking-tight">Audit Trail</h2>
-            <p className="text-xs text-text-muted mt-0.5">Verifiable, immutable-style record of all decisions, policy gates & outcomes</p>
+            <h2 className="text-xl font-semibold text-text-primary tracking-tight">Audit Trail Ledger</h2>
+            <p className="text-[13px] text-text-muted mt-0.5">Verifiable, immutable-style record of all decisions, policy gates & outcomes</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <span className="text-xs font-mono text-text-muted">{filtered.length} entries</span>
+          <div className="flex items-center space-x-2 text-[12px] font-mono text-text-muted bg-surface px-3 py-1 rounded-full border border-border-subtle shadow-inner mr-2 hidden sm:flex">
+            <Layers className="w-3.5 h-3.5" />
+            <span>{filtered.length} entries</span>
+          </div>
           <button
             id="btn-refresh-audit"
             onClick={loadAuditLog}
             disabled={loading}
-            className="p-2 rounded-sm bg-panel border border-border-strong text-text-muted hover:text-text-primary transition disabled:opacity-50"
+            className="px-4 py-2 rounded-md bg-surface border border-border-strong text-text-primary hover:bg-panel-hover text-[12px] font-medium flex items-center space-x-2 transition-all shadow-sm disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="p-3 rounded bg-risk-muted border border-risk-500/40 text-risk-300 text-xs font-mono">{errorMsg}</div>
+        <div className="p-4 rounded-lg bg-risk-900/20 border border-risk-500/40 text-risk-400 text-[13px] font-medium flex items-center">{errorMsg}</div>
       )}
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
           <input
             id="input-audit-search"
             type="text"
             placeholder="Search by Event ID, Transaction ID, Action..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-panel border border-border-strong rounded-sm text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary-500/60 font-mono"
+            className="w-full pl-10 pr-4 py-2.5 bg-panel border border-border-strong rounded-lg text-[13px] text-text-primary placeholder:text-text-muted/70 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/50 transition-all font-mono"
           />
         </div>
         <div className="relative">
@@ -100,95 +94,138 @@ export default function AuditPage() {
             id="select-event-type"
             value={eventTypeFilter}
             onChange={(e) => setEventTypeFilter(e.target.value)}
-            className="appearance-none pl-3 pr-8 py-2 bg-panel border border-border-strong rounded-sm text-xs text-text-secondary focus:outline-none focus:border-primary-500/60 font-mono"
+            className="appearance-none pl-4 pr-10 py-2.5 bg-panel border border-border-strong rounded-lg text-[13px] text-text-primary focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/50 transition-all font-mono w-full sm:w-auto"
           >
             <option value="">All Event Types</option>
             {EVENT_TYPES.slice(1).map((t) => (
-              <option key={t} value={t}>{t}</option>
+              <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-panel border border-border-subtle rounded-md shadow-panel overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
+      <div className="bg-panel border border-border-strong rounded-xl shadow-sm overflow-x-auto custom-scrollbar">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-border-divider text-[11px] font-mono text-text-muted uppercase">
-              <th className="py-3 px-4">Event ID / Timestamp</th>
-              <th className="py-3 px-4">Transaction</th>
-              <th className="py-3 px-4">Event Type</th>
-              <th className="py-3 px-4">Action</th>
-              <th className="py-3 px-4">Policy Gate</th>
-              <th className="py-3 px-4">Model / Provider</th>
-              <th className="py-3 px-4 text-right">Outcome</th>
+            <tr className="border-b border-border-subtle text-[11px] font-mono text-text-muted uppercase tracking-wider bg-surface/50">
+              <th className="py-4 px-5 font-medium">Event & Timestamp</th>
+              <th className="py-4 px-5 font-medium">Transaction</th>
+              <th className="py-4 px-5 font-medium">Event Type</th>
+              <th className="py-4 px-5 font-medium">Action</th>
+              <th className="py-4 px-5 font-medium">Safety Gate</th>
+              <th className="py-4 px-5 font-medium">Intelligence</th>
+              <th className="py-4 px-5 font-medium text-right">Outcome</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-divider font-mono">
+          <tbody className="text-[13px]">
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-text-muted italic font-sans">Loading audit log...</td>
+                <td colSpan={7} className="py-12 text-center text-text-muted">
+                  <div className="flex flex-col items-center justify-center">
+                    <RefreshCw className="w-6 h-6 animate-spin text-primary-400/50 mb-3" />
+                    <span>Loading audit ledger...</span>
+                  </div>
+                </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center font-sans">
-                  <FileSpreadsheet className="w-8 h-8 text-text-muted mx-auto mb-2" />
-                  <p className="text-text-muted text-xs">
-                    {auditLog.length === 0
-                      ? 'No audit events recorded yet. Run a scan and batch recovery to populate the audit trail.'
-                      : 'No events match your search.'}
-                  </p>
+                <td colSpan={7} className="py-12 text-center font-sans">
+                  <div className="flex flex-col items-center justify-center">
+                    <History strokeWidth={1.5} className="w-10 h-10 text-text-muted/40 mb-3" />
+                    <p className="text-text-muted text-[13px]">
+                      {auditLog.length === 0
+                        ? 'No audit events recorded yet. Run a scan and batch recovery to populate the audit trail.'
+                        : 'No events match your search parameters.'}
+                    </p>
+                  </div>
                 </td>
               </tr>
             ) : (
-              filtered.slice(0, 500).map((evt) => {
-                const meta = EVENT_META[evt.event_type] || { color: 'text-text-secondary', bg: 'bg-surface border-border-subtle' };
-                return (
-                  <tr key={evt.event_id} className="hover:bg-panel-hover transition">
-                    <td className="py-3 px-4">
-                      <div className="text-text-primary font-medium truncate max-w-[120px]" title={evt.event_id}>{evt.event_id}</div>
-                      <div className="text-[11px] text-text-muted">{formatTimeAgo(evt.timestamp)}</div>
+              <AnimatePresence>
+                {filtered.slice(0, 500).map((evt, idx) => (
+                  <motion.tr
+                    key={evt.event_id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: Math.min(idx * 0.02, 0.5), duration: 0.2 }}
+                    className="border-b border-border-divider hover:bg-surface/50 transition-colors group"
+                  >
+                    {/* Event ID & Time */}
+                    <td className="py-3.5 px-5">
+                      <div className="flex flex-col space-y-1">
+                        <div className="text-text-primary text-[12px] font-medium font-mono truncate max-w-[120px] group-hover:text-primary-400 transition-colors" title={evt.event_id}>{evt.event_id}</div>
+                        <div className="text-[11px] text-text-muted">{formatTimeAgo(evt.timestamp)}</div>
+                      </div>
                     </td>
-                    <td className="py-3 px-4 text-primary-300 font-semibold">{evt.transaction_id}</td>
-                    <td className="py-3 px-4">
-                      <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded border ${meta.bg} ${meta.color}`}>
-                        {evt.event_type}
+
+                    {/* Transaction ID */}
+                    <td className="py-3.5 px-5 font-mono font-medium text-primary-400 tracking-tight">
+                      {evt.transaction_id}
+                    </td>
+
+                    {/* Event Type */}
+                    <td className="py-3.5 px-5">
+                      <span
+                        className={`inline-flex items-center justify-center font-mono text-[10px] font-bold px-2 py-0.5 rounded border tracking-wider uppercase ${
+                          evt.event_type === 'ACTION_BLOCKED'
+                            ? 'bg-risk-900/20 text-risk-400 border-risk-500/30'
+                            : evt.event_type === 'EXECUTION_SUCCEEDED'
+                            ? 'bg-success-900/20 text-success-400 border-success-500/30'
+                            : evt.event_type === 'ESCALATION_CREATED'
+                            ? 'bg-warning-900/20 text-warning-400 border-warning-500/30'
+                            : 'bg-surface text-text-secondary border-border-strong'
+                        }`}
+                      >
+                        {evt.event_type.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="py-3 px-4 capitalize font-sans text-text-primary">{evt.action}</td>
-                    <td className="py-3 px-4 font-sans">
+
+                    {/* Action */}
+                    <td className="py-3.5 px-5 capitalize font-medium text-text-primary tracking-tight">
+                      {evt.action}
+                    </td>
+
+                    {/* Policy Gate */}
+                    <td className="py-3.5 px-5">
                       {evt.policy_result?.allowed ? (
-                        <span className="text-success-300 flex items-center space-x-1 text-[11px]">
-                          <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                        <span className="inline-flex items-center space-x-1.5 text-[11px] font-medium text-success-400">
+                          <ShieldCheck className="w-3.5 h-3.5" />
                           <span>Allowed</span>
                         </span>
                       ) : (
-                        <span className="text-risk-300 flex items-center space-x-1 text-[11px]" title={evt.policy_result?.reason}>
+                        <span className="inline-flex items-center space-x-1.5 text-[11px] font-medium text-risk-400" title={evt.policy_result?.reason}>
                           <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate max-w-[120px]">{evt.policy_result?.reason || 'Blocked'}</span>
+                          <span className="truncate max-w-[140px]">{evt.policy_result?.reason || 'Blocked'}</span>
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-[11px] text-text-muted">
-                      <div>{evt.model_version}</div>
-                      <div className="uppercase">{evt.provider}</div>
+
+                    {/* Model / Provider */}
+                    <td className="py-3.5 px-5">
+                      <div className="flex flex-col space-y-1 text-[11px] font-mono text-text-muted">
+                        <span>{evt.model_version}</span>
+                        <span className="uppercase text-text-secondary">{evt.provider}</span>
+                      </div>
                     </td>
-                    <td className="py-3 px-4 text-right">
+
+                    {/* Outcome */}
+                    <td className="py-3.5 px-5 text-right">
                       {evt.outcome?.recovered_amount ? (
-                        <span className="font-bold text-success-300">+{formatINR(evt.outcome.recovered_amount)}</span>
+                        <span className="font-mono font-bold text-success-400 tracking-tight">+{formatINR(evt.outcome.recovered_amount)}</span>
                       ) : (
-                        <span className="text-text-muted text-[11px] uppercase">{evt.outcome?.status || 'recorded'}</span>
+                        <span className="text-text-muted text-[11px] font-mono uppercase tracking-widest">{evt.outcome?.status || 'recorded'}</span>
                       )}
                     </td>
-                  </tr>
-                );
-              })
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
             )}
           </tbody>
         </table>
         {filtered.length > 500 && (
-          <div className="px-4 py-2 border-t border-border-divider text-xs text-text-muted font-mono">
+          <div className="px-5 py-3 border-t border-border-divider text-[11px] text-text-muted font-mono bg-surface/30">
             Showing first 500 of {filtered.length} entries.
           </div>
         )}

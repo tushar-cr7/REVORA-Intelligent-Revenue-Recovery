@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { api } from '@/lib/api';
@@ -36,20 +37,34 @@ export default function DashboardLayout({
     }
   }, []);
 
+  const reduceMotion = useReducedMotion();
+
   return (
     <div className="min-h-screen bg-canvas text-text-primary flex flex-col">
-      <Header
-        onScan={handleScan}
-        onAnalyze={handleAnalyze}
-        isScanning={isScanning}
-        isAnalyzing={isAnalyzing}
-      />
-      <div className="flex-1 flex overflow-hidden">
+      <motion.div
+        className="w-full"
+        initial={reduceMotion ? undefined : { opacity: 0, y: -10 }}
+        animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Header
+          onScan={handleScan}
+          onAnalyze={handleAnalyze}
+          isScanning={isScanning}
+          isAnalyzing={isAnalyzing}
+        />
+      </motion.div>
+      <motion.div
+        className="flex-1 flex overflow-hidden"
+        initial={reduceMotion ? undefined : { opacity: 0 }}
+        animate={reduceMotion ? undefined : { opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+      >
         <Sidebar />
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
-      </div>
+      </motion.div>
     </div>
   );
 }

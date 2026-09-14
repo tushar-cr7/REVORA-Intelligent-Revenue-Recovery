@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlertTriangle, RefreshCw, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { CircleAlert, RefreshCw, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Decision } from '@/lib/types';
 import { formatINR, formatPct, formatTimeAgo } from '@/lib/format';
@@ -34,9 +34,7 @@ export default function EscalationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-sm bg-warning-muted border border-warning-500/30 flex items-center justify-center text-warning-300">
-            <AlertTriangle className="w-4 h-4" />
-          </div>
+          <CircleAlert strokeWidth={1.75} className="w-5 h-5 text-text-muted shrink-0" />
           <div>
             <h2 className="text-xl font-semibold text-text-primary tracking-tight">Escalations</h2>
             <p className="text-xs text-text-muted mt-0.5">AI-proposed actions rerouted to merchant by the policy engine</p>
@@ -90,7 +88,7 @@ export default function EscalationsPage() {
             ) : escalations.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-8 text-center font-sans">
-                  <AlertTriangle className="w-8 h-8 text-text-muted mx-auto mb-2" />
+                  <CircleAlert strokeWidth={1.5} className="w-8 h-8 text-text-muted mx-auto mb-2" />
                   <p className="text-text-muted text-xs">No escalations recorded yet.</p>
                   <p className="text-text-muted text-[11px] mt-1">Run a scan and batch recovery — escalations are generated when policy limits are breached.</p>
                 </td>

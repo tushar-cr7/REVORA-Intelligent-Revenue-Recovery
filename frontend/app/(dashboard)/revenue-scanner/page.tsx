@@ -1,41 +1,97 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { Radar, RefreshCw, AlertCircle, TrendingUp, Activity } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import Link from 'next/link';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import {
+  ScanLine,
+  RefreshCw,
+  Activity,
+  TrendingUp,
+  ArrowRight,
+  LayoutDashboard,
+  Network,
+  Rows3,
+  Crosshair,
+  AlertTriangle,
+  CheckCircle2,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { ScanResponse, AnalyzeResponse } from '@/lib/types';
-import { formatINR, formatPct } from '@/lib/format';
+import { formatPct, formatTimeAgo } from '@/lib/format';
+import { TransactionField, FieldPhase } from '@/components/scanner/TransactionField';
+import { ScanStages } from '@/components/scanner/ScanStages';
+import { ScanReportHeader } from '@/components/scanner/ScanReportHeader';
+import { RiskDensityMap } from '@/components/scanner/RiskDensityMap';
+import { ScanInsights } from '@/components/scanner/ScanInsights';
+import { RecommendedActions } from '@/components/scanner/RecommendedActions';
 
-const CATEGORY_META: Record<string, { label: string; color: string; bg: string; border: string; dot: string }> = {
-  failed_payment:      { label: 'Failed Payments',      color: 'text-risk-300',    bg: 'bg-risk-muted',    border: 'border-risk-500/30',    dot: 'bg-risk-500' },
-  abandoned_checkout:  { label: 'Abandoned Checkouts',  color: 'text-warning-300', bg: 'bg-warning-muted', border: 'border-warning-500/30', dot: 'bg-warning-500' },
-  failed_subscription: { label: 'Subscription Failures',color: 'text-ai-300',      bg: 'bg-ai-muted',      border: 'border-ai-500/30',      dot: 'bg-ai-500' },
-  overdue_invoice:     { label: 'Overdue Invoices',     color: 'text-primary-300', bg: 'bg-primary-muted', border: 'border-primary-500/30', dot: 'bg-primary-500' },
-};
+type Phase = 'idle' | 'scanning' | 'completing' | 'results' | 'error';
+
+const TARGET_COUNT = 10000;
+
+// Time-paced stage advancement while the real scan request is in flight.
+// The backend returns one atomic response with no incremental progress, so
+// this narrates the process rather than claiming live telemetry.
+const STAGE_DELAYS_MS = [900, 2000, 3300, 4500];
+
+const CONNECTIONS = [
+  { href: '/mission-control', label: 'Revenue Command', icon: LayoutDashboard, desc: 'See where money is at risk' },
+  { href: '/recovery-brain', label: 'Recovery Brain', icon: Network, desc: 'Understand the recommendation' },
+  { href: '/transactions', label: 'Transactions', icon: Rows3, desc: 'Investigate individual leaks' },
+  { href: '/interventions', label: 'Interventions', icon: Crosshair, desc: 'Recover what REVORA can act on' },
+];
 
 export default function RevenueScannerPage() {
+  const reduceMotion = useReducedMotion();
   const [scanData, setScanData] = useState<ScanResponse | null>(null);
   const [analyzeData, setAnalyzeData] = useState<AnalyzeResponse | null>(null);
-  const [scanning, setScanning] = useState(false);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [stageIndex, setStageIndex] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [scanCompletedAt, setScanCompletedAt] = useState<Date | null>(null);
+
+  const timersRef = useRef<number[]>([]);
+  const clearTimers = () => {
+    timersRef.current.forEach((id) => window.clearTimeout(id));
+    timersRef.current = [];
+  };
+  useEffect(() => clearTimers, []);
+
+  const scanning = phase === 'scanning' || phase === 'completing';
 
   const handleScan = useCallback(async () => {
-    setScanning(true);
     setErrorMsg(null);
+    setPhase('scanning');
+    setStageIndex(0);
+    clearTimers();
+    STAGE_DELAYS_MS.forEach((delay, i) => {
+      timersRef.current.push(window.setTimeout(() => setStageIndex(i + 1), delay));
+    });
     try {
-      const res = await api.scanRevenue(10000, 42);
+      const res = await api.scanRevenue(TARGET_COUNT, 42);
+      clearTimers();
       setScanData(res);
+      setScanCompletedAt(new Date());
+      setPhase('completing');
+      // Held long enough to watch the field's discovery reveal play out
+      // (the scan line's final pass + staggered node reveal, ~2.2s) before
+      // the full report surfaces underneath it.
+      timersRef.current.push(window.setTimeout(() => setPhase('results'), reduceMotion ? 100 : 2200));
     } catch (err: unknown) {
+      clearTimers();
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      setErrorMsg(`Scan failed: ${msg}`);
-    } finally {
-      setScanning(false);
+      setErrorMsg(msg);
+      setPhase(scanData ? 'results' : 'error');
     }
-  }, []);
+  }, [scanData, reduceMotion]);
 
   const handleAnalyze = useCallback(async () => {
-    if (!scanData) { setErrorMsg('Run a scan first.'); return; }
+    if (!scanData) {
+      setErrorMsg('Run a scan first.');
+      return;
+    }
     setAnalyzing(true);
     setErrorMsg(null);
     try {
@@ -49,35 +105,33 @@ export default function RevenueScannerPage() {
     }
   }, [scanData]);
 
-  const totalAtRisk = scanData?.total_at_risk ?? 0;
+  const fieldPhase: FieldPhase =
+    phase === 'scanning' ? 'scanning' : phase === 'completing' || phase === 'results' ? 'complete' : phase === 'error' ? 'error' : 'idle';
 
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-[1600px] mx-auto w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-sm bg-primary-muted border border-primary-500/30 flex items-center justify-center text-primary-300">
-            <Radar className="w-4 h-4" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold text-text-primary tracking-tight">Revenue Scanner</h2>
-            <p className="text-xs text-text-muted mt-0.5">Detect and classify all active revenue leaks</p>
-          </div>
+        <div>
+          <h2 className="text-xl font-semibold text-text-primary tracking-tight">Revenue Scanner</h2>
+          <p className="text-xs text-text-muted mt-0.5">REVORA looks inside your revenue universe</p>
         </div>
         <div className="flex items-center space-x-2">
           <button
             id="btn-run-scan"
             onClick={handleScan}
             disabled={scanning}
+            aria-label={scanning ? 'Scan in progress' : scanData ? 'Run scan again' : 'Run scan'}
             className="flex items-center space-x-2 px-4 py-2 rounded-sm bg-panel border border-border-strong text-text-secondary hover:text-text-primary hover:border-primary-500/50 text-xs font-medium transition disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${scanning ? 'animate-spin text-primary-300' : ''}`} />
-            <span>{scanning ? 'Scanning...' : 'Run Scan'}</span>
+            <span>{scanning ? 'Scanning...' : scanData ? 'Run Scan Again' : 'Run Scan'}</span>
           </button>
           <button
             id="btn-run-intelligence"
             onClick={handleAnalyze}
-            disabled={analyzing || !scanData}
+            disabled={analyzing || !scanData || scanning}
+            aria-label={analyzing ? 'Intelligence pass in progress' : 'Run intelligence pass'}
             className="flex items-center space-x-2 px-4 py-2 rounded-sm bg-ai-700 hover:bg-ai-600 text-text-primary text-xs font-semibold transition disabled:opacity-50"
           >
             <Activity className={`w-3.5 h-3.5 ${analyzing ? 'animate-spin' : ''}`} />
@@ -86,147 +140,218 @@ export default function RevenueScannerPage() {
         </div>
       </div>
 
-      {errorMsg && (
+      {errorMsg && phase !== 'error' && (
         <div className="p-3 rounded bg-risk-muted border border-risk-500/40 text-risk-300 text-xs font-mono">{errorMsg}</div>
       )}
 
-      {/* Status */}
-      {!scanData && (
-        <div className="bg-panel border border-border-subtle rounded-md p-10 text-center">
-          <Radar className="w-10 h-10 text-text-muted mx-auto mb-3" />
-          <p className="text-text-muted text-sm">No scan data available.</p>
-          <p className="text-text-muted text-xs mt-1">Click <strong className="text-text-primary">Run Scan</strong> to detect revenue leaks across 10,000 transactions.</p>
-        </div>
-      )}
-
-      {scanData && (
-        <>
-          {/* KPI Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-panel border border-border-subtle rounded-md p-4 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-risk-500" />
-              <span className="text-[11px] font-mono uppercase text-text-muted">Transactions Scanned</span>
-              <div className="text-3xl font-mono font-bold text-text-primary mt-2">
-                {scanData.total_transactions_scanned.toLocaleString()}
-              </div>
-              <p className="text-xs text-text-muted mt-1">All at-risk transactions detected</p>
-            </div>
-            <div className="bg-panel border border-border-subtle rounded-md p-4 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-warning-500" />
-              <span className="text-[11px] font-mono uppercase text-text-muted">Total Revenue at Risk</span>
-              <div className="text-3xl font-mono font-bold text-text-primary mt-2">
-                {formatINR(totalAtRisk, true)}
-              </div>
-              <p className="text-xs text-text-muted mt-1">Gross recoverable universe</p>
-            </div>
-            <div className="bg-panel border border-border-subtle rounded-md p-4 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-ai-500" />
-              <span className="text-[11px] font-mono uppercase text-text-muted">Realistically Recoverable</span>
-              <div className="text-3xl font-mono font-bold text-ai-100 mt-2">
-                {analyzeData ? formatINR(analyzeData.realistically_recoverable, true) : '—'}
-              </div>
-              <p className="text-xs text-text-muted mt-1">
-                {analyzeData
-                  ? `Avg P(recovery): ${formatPct(analyzeData.avg_recovery_probability)}`
-                  : 'Run intelligence pass to compute'}
-              </p>
-            </div>
-          </div>
-
-          {/* Leak Breakdown */}
-          <div className="bg-panel border border-border-subtle rounded-md p-4">
-            <div className="flex items-center justify-between pb-3 border-b border-border-divider">
-              <div>
-                <h3 className="text-text-primary text-sm font-semibold tracking-tight flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 text-risk-300" />
-                  <span>Leak Category Breakdown</span>
-                </h3>
-                <p className="text-text-muted text-xs mt-0.5">Categorized risk universe from detection engine</p>
-              </div>
-              <span className="font-mono text-xs text-text-muted">{scanData.breakdown.length} categories</span>
-            </div>
-
-            <div className="mt-4 space-y-4">
-              {scanData.breakdown.map((item) => {
-                const meta = CATEGORY_META[item.leak_type] || {
-                  label: item.leak_type, color: 'text-text-secondary',
-                  bg: 'bg-panel-raised', border: 'border-border-subtle', dot: 'bg-primary-500',
-                };
-                const pct = totalAtRisk > 0 ? (item.amount_at_risk / totalAtRisk) * 100 : 0;
-                const recoverability = analyzeData?.proposed_action_counts
-                  ? Object.entries(analyzeData.proposed_action_counts)
-                      .filter(([a]) => a !== 'suppress')
-                      .reduce((s, [, v]) => s + v, 0)
-                  : null;
-
-                return (
-                  <div key={item.leak_type} className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-3">
-                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-0.5 ${meta.dot}`} />
-                        <div>
-                          <div className="text-text-primary text-sm font-medium">{meta.label}</div>
-                          <div className="text-text-muted text-xs font-mono">{item.count} transactions</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-mono font-semibold text-text-primary text-sm">{formatINR(item.amount_at_risk)}</div>
-                        <div className={`text-xs font-mono font-bold ${meta.color}`}>{pct.toFixed(1)}% of risk</div>
-                      </div>
-                    </div>
-                    <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${meta.dot} transition-all duration-700`}
-                        style={{ width: `${Math.max(2, pct)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Intelligence Results (if available) */}
-          {analyzeData && (
-            <div className="bg-panel border border-border-subtle rounded-md p-4">
-              <div className="flex items-center space-x-2 pb-3 border-b border-border-divider">
-                <TrendingUp className="w-4 h-4 text-ai-300" />
-                <h3 className="text-text-primary text-sm font-semibold">Intelligence Analysis Results</h3>
-              </div>
-              <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
-                <div className="bg-surface rounded border border-border-divider p-3">
-                  <span className="text-[10px] uppercase text-text-muted block">Actions Proposed</span>
-                  {Object.entries(analyzeData.proposed_action_counts).map(([action, count]) => (
-                    <div key={action} className="flex justify-between mt-1">
-                      <span className="capitalize text-text-secondary">{action}</span>
-                      <span className="text-text-primary font-bold">{count}</span>
-                    </div>
-                  ))}
+      {/* Hero: the scan field + diagnostic readout, side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 items-start">
+        <div>
+          {(phase === 'idle' || phase === 'scanning') && (
+            <div className="mb-3">
+              <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-text-muted">
+                {phase === 'scanning' ? 'Scanning Your Revenue' : 'Revenue Scanner'}
+              </span>
+              <h3 className="mt-1 text-xl sm:text-2xl font-display font-semibold text-text-primary tracking-tight">
+                {phase === 'scanning' ? `Target: ${TARGET_COUNT.toLocaleString()} transactions` : 'Ready to map your revenue'}
+              </h3>
+              {phase === 'idle' && (
+                <p className="mt-1 text-[13px] text-text-muted max-w-md">
+                  {TARGET_COUNT.toLocaleString()} transactions waiting to be analyzed across payments, checkouts, invoices, and subscriptions.
+                </p>
+              )}
+              {phase === 'scanning' && (
+                <div className="mt-2.5 w-full max-w-xs h-1.5 rounded-full bg-surface border border-border-subtle/50 overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full bg-primary-500"
+                    initial={{ width: '3%' }}
+                    animate={{ width: '92%' }}
+                    transition={{ duration: 6.5, ease: [0.16, 1, 0.3, 1] }}
+                  />
                 </div>
-                <div className="bg-surface rounded border border-border-divider p-3">
-                  <span className="text-[10px] uppercase text-text-muted block mb-1">Policy Blocked</span>
-                  <span className="text-2xl font-bold text-risk-300">{analyzeData.policy_blocked_count}</span>
-                  <p className="text-text-muted text-[10px] mt-1">Prevented by guardrails</p>
-                </div>
-                <div className="bg-surface rounded border border-border-divider p-3">
-                  <span className="text-[10px] uppercase text-text-muted block mb-1">Avg Recovery Prob</span>
-                  <span className="text-2xl font-bold text-ai-300">{formatPct(analyzeData.avg_recovery_probability)}</span>
-                  <p className="text-text-muted text-[10px] mt-1">Across all transactions</p>
-                </div>
-                <div className="bg-surface rounded border border-border-divider p-3">
-                  <span className="text-[10px] uppercase text-text-muted block mb-1">Model</span>
-                  <span className="text-base font-bold text-text-primary">{analyzeData.model_metadata?.dataset_type || 'XGBoost'}</span>
-                  <p className="text-text-muted text-[10px] mt-1">v{analyzeData.model_metadata?.model_version || '1.0.0'}</p>
-                </div>
-              </div>
-              <div className="mt-4 p-3 rounded bg-ai-muted/30 border border-ai-500/20 text-xs text-ai-100 leading-relaxed">
-                <strong className="text-ai-300">Intelligence Synthesis: </strong>
-                {analyzeData.explanation}
-              </div>
+              )}
             </div>
           )}
-        </>
-      )}
+          {phase === 'error' && (
+            <div className="mb-3">
+              <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-risk-400">Scan Interrupted</span>
+              <h3 className="mt-1 text-xl sm:text-2xl font-display font-semibold text-text-primary tracking-tight">
+                REVORA couldn&apos;t complete the revenue scan
+              </h3>
+              {errorMsg && <p className="mt-1 text-[13px] text-text-muted max-w-md font-mono">{errorMsg}</p>}
+            </div>
+          )}
+          <TransactionField phase={fieldPhase} breakdown={scanData?.breakdown} />
+        </div>
+
+        {/* Diagnostic readout panel */}
+        <div className="rounded-lg border border-border-subtle bg-surface/40 p-4 lg:min-h-[240px] flex flex-col">
+          {phase === 'idle' && (
+            <div className="flex flex-col h-full justify-between">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-text-muted">Instrument Status</span>
+                <p className="mt-2 text-[13px] text-text-secondary leading-relaxed">
+                  Connect payments, checkouts, invoices, and subscriptions to REVORA and begin a full diagnostic pass.
+                </p>
+              </div>
+              <button
+                onClick={handleScan}
+                className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold transition-colors shadow-sm"
+              >
+                <ScanLine className="w-4 h-4" />
+                Run Scan
+              </button>
+            </div>
+          )}
+
+          {phase === 'scanning' && (
+            <>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-3">Diagnostic Sequence</span>
+              <ScanStages stageIndex={stageIndex} />
+            </>
+          )}
+
+          {(phase === 'completing' || phase === 'results') && scanData && (
+            <AnimatePresence mode="wait">
+              {phase === 'completing' ? (
+                <motion.div
+                  key="completing"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col items-center justify-center text-center h-full py-6"
+                >
+                  <CheckCircle2 className="w-6 h-6 text-success-400 mb-2" />
+                  <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-success-400">Scan Complete</div>
+                  <div className="mt-2 text-lg font-display font-semibold text-text-primary tabular-nums">
+                    {scanData.total_transactions_scanned.toLocaleString()} analyzed
+                  </div>
+                  <div className="mt-1 text-[12px] text-text-muted">
+                    {scanData.breakdown.length} leak categor{scanData.breakdown.length === 1 ? 'y' : 'ies'} identified
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div key="results-status" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success-400" />
+                    <span className="text-success-300 font-semibold uppercase tracking-wider">Scan Complete</span>
+                  </div>
+                  {scanCompletedAt && (
+                    <p className="mt-2 text-[12px] text-text-muted">Scanned {formatTimeAgo(scanCompletedAt.toISOString())}</p>
+                  )}
+                  <p className="mt-3 text-[13px] text-text-secondary leading-relaxed">
+                    {scanData.breakdown.length} revenue leak categories identified across {scanData.total_transactions_scanned.toLocaleString()} transactions. Full report below.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
+
+          {phase === 'error' && (
+            <div className="flex flex-col h-full justify-between">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-risk-400 shrink-0 mt-0.5" />
+                <p className="text-[13px] text-text-secondary leading-relaxed">
+                  The transaction field stayed dormant — nothing was scanned. Try again when ready.
+                </p>
+              </div>
+              <button
+                onClick={handleScan}
+                className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold transition-colors shadow-sm"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Retry Scan
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Results report */}
+      <AnimatePresence>
+        {phase === 'results' && scanData && (
+          <motion.div
+            key="results"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-6"
+          >
+            <ScanReportHeader scanData={scanData} analyzeData={analyzeData} scanCompletedAt={scanCompletedAt} />
+            <RiskDensityMap scanData={scanData} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ScanInsights scanData={scanData} />
+              <RecommendedActions scanData={scanData} />
+            </div>
+
+            {/* Intelligence Analysis (technical detail, kept available but secondary) */}
+            {analyzeData && (
+              <div className="bg-panel border border-border-strong rounded-xl p-5 shadow-sm">
+                <div className="flex items-center space-x-2 pb-3 border-b border-border-subtle">
+                  <TrendingUp className="w-4 h-4 text-ai-300" />
+                  <h3 className="text-text-primary text-sm font-semibold">Intelligence Analysis</h3>
+                </div>
+                <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
+                  <div className="bg-surface rounded border border-border-divider p-3">
+                    <span className="text-[10px] uppercase text-text-muted block">Actions Proposed</span>
+                    {Object.entries(analyzeData.proposed_action_counts).map(([action, count]) => (
+                      <div key={action} className="flex justify-between mt-1">
+                        <span className="capitalize text-text-secondary">{action}</span>
+                        <span className="text-text-primary font-bold">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-surface rounded border border-border-divider p-3">
+                    <span className="text-[10px] uppercase text-text-muted block mb-1">Policy Blocked</span>
+                    <span className="text-2xl font-bold text-risk-300">{analyzeData.policy_blocked_count}</span>
+                    <p className="text-text-muted text-[10px] mt-1">Prevented by guardrails</p>
+                  </div>
+                  <div className="bg-surface rounded border border-border-divider p-3">
+                    <span className="text-[10px] uppercase text-text-muted block mb-1">Avg Recovery Prob</span>
+                    <span className="text-2xl font-bold text-ai-300">{formatPct(analyzeData.avg_recovery_probability)}</span>
+                    <p className="text-text-muted text-[10px] mt-1">Across all transactions</p>
+                  </div>
+                  <div className="bg-surface rounded border border-border-divider p-3">
+                    <span className="text-[10px] uppercase text-text-muted block mb-1">Model</span>
+                    <span className="text-base font-bold text-text-primary">{analyzeData.model_metadata?.dataset_type || 'XGBoost'}</span>
+                    <p className="text-text-muted text-[10px] mt-1">v{analyzeData.model_metadata?.model_version || '1.0.0'}</p>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 rounded bg-ai-muted/30 border border-ai-500/20 text-xs text-ai-100 leading-relaxed">
+                  <strong className="text-ai-300">Intelligence Synthesis: </strong>
+                  {analyzeData.explanation}
+                </div>
+              </div>
+            )}
+
+            {/* Connect to the rest of REVORA */}
+            <div className="pt-2">
+              <div className="text-[11px] font-mono uppercase tracking-widest text-text-muted mb-3">Scan → Understand → Investigate → Recover</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {CONNECTIONS.map((c) => {
+                  const Icon = c.icon;
+                  return (
+                    <Link
+                      key={c.href}
+                      href={c.href}
+                      className="group flex items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface px-4 py-3 hover:border-primary-500/40 hover:bg-panel-hover transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-[12.5px] font-medium text-text-primary truncate">{c.label}</div>
+                          <div className="text-[10.5px] text-text-muted truncate">{c.desc}</div>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-3.5 h-3.5 text-text-muted group-hover:text-primary-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

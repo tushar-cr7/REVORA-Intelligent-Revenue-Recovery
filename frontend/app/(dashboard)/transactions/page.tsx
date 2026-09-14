@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Receipt, Search, RefreshCw, ArrowUpRight, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Rows3, Search, RefreshCw, ArrowUpRight, ChevronDown } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Transaction } from '@/lib/types';
 import { formatINR, formatPct, formatTimeAgo } from '@/lib/format';
@@ -17,12 +18,28 @@ const LEAK_META: Record<string, { label: string; color: string; bg: string }> = 
 };
 
 export default function TransactionsPage() {
+  return (
+    <Suspense fallback={null}>
+      <TransactionsPageInner />
+    </Suspense>
+  );
+}
+
+function TransactionsPageInner() {
+  const searchParams = useSearchParams();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [leakTypeFilter, setLeakTypeFilter] = useState('');
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
+
+  // Reacts to the ?leak_type= param even when Next.js reuses a cached
+  // instance of this page across a client-side navigation (e.g. from the
+  // Revenue Risk Map), where a mount-only initializer would miss the value.
+  useEffect(() => {
+    setLeakTypeFilter(searchParams.get('leak_type') || '');
+  }, [searchParams]);
 
   const loadTransactions = useCallback(async () => {
     setLoading(true);
@@ -54,9 +71,7 @@ export default function TransactionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-sm bg-primary-muted border border-primary-500/30 flex items-center justify-center text-primary-300">
-            <Receipt className="w-4 h-4" />
-          </div>
+          <Rows3 strokeWidth={1.75} className="w-5 h-5 text-text-muted shrink-0" />
           <div>
             <h2 className="text-xl font-semibold text-text-primary tracking-tight">Transactions</h2>
             <p className="text-xs text-text-muted mt-0.5">All detected revenue leaks with recovery probability</p>

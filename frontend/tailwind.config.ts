@@ -61,10 +61,35 @@ const config: Config = {
           500: "#F5A623",
           muted: "#2B2110",
         },
+        // Marketing site tokens
+        paper: {
+          DEFAULT: "#FBFAF7",
+          alt: "#F3F1EA",
+          raised: "#FFFFFF",
+        },
+        ink: {
+          DEFAULT: "#14151A",
+          secondary: "#4C505B",
+          muted: "#888C96",
+        },
+        hairline: {
+          DEFAULT: "#E6E3D9",
+          strong: "#D6D2C4",
+        },
+        accent: {
+          100: "#E7EBFF",
+          300: "#9CADFF",
+          500: "#4F5EF0",
+          600: "#3C46CC",
+          violet: "#8B5CF6",
+        },
       },
       fontFamily: {
         sans: ["Geist Sans", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
         mono: ["Geist Mono", "IBM Plex Mono", "ui-monospace", "monospace"],
+        display: ["var(--font-display)", "Georgia", "serif"],
+        marketing: ["var(--font-marketing)", "-apple-system", "Segoe UI", "sans-serif"],
+        tabular: ["var(--font-portal-mono)", "IBM Plex Mono", "ui-monospace", "monospace"],
       },
       borderRadius: {
         sm: "6px",

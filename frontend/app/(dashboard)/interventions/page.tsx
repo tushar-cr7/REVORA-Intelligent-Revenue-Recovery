@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Zap, RefreshCw, CheckCircle2, AlertCircle, ShieldCheck, ShieldAlert, Clock } from 'lucide-react';
+import { Crosshair, RefreshCw, CheckCircle2, AlertCircle, ShieldCheck, ShieldAlert, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Intervention } from '@/lib/types';
 import { formatINR, formatTimeAgo } from '@/lib/format';
@@ -54,9 +54,7 @@ export default function InterventionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-sm bg-primary-muted border border-primary-500/30 flex items-center justify-center text-primary-300">
-            <Zap className="w-4 h-4" />
-          </div>
+          <Crosshair strokeWidth={1.75} className="w-5 h-5 text-text-muted shrink-0" />
           <div>
             <h2 className="text-xl font-semibold text-text-primary tracking-tight">Interventions</h2>
             <p className="text-xs text-text-muted mt-0.5">All executed recovery interventions with outcomes</p>

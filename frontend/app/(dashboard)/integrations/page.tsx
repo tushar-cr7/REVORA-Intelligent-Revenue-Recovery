@@ -1,16 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Sliders, CheckCircle2, XCircle, Info } from 'lucide-react';
+import { Waypoints, CheckCircle2, XCircle, Info } from 'lucide-react';
 
 export default function IntegrationsPage() {
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-[1600px] mx-auto w-full">
       {/* Header */}
       <div className="flex items-center space-x-3">
-        <div className="w-8 h-8 rounded-sm bg-surface border border-border-strong flex items-center justify-center text-text-secondary">
-          <Sliders className="w-4 h-4" />
-        </div>
+        <Waypoints strokeWidth={1.75} className="w-5 h-5 text-text-muted shrink-0" />
         <div>
           <h2 className="text-xl font-semibold text-text-primary tracking-tight">Integrations</h2>
           <p className="text-xs text-text-muted mt-0.5">Payment execution providers and external system connections</p>

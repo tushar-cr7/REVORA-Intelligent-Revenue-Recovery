@@ -199,3 +199,14 @@ export interface AnalyticsResponse {
   policy_blocked_count: number;
   escalation_count: number;
 }
+
+export interface CopilotResponse {
+  query: string;
+  headline: string;
+  answer: string;
+  key_metrics: Record<string, any>;
+  recommendations: string[];
+  guardrail_status: string;
+  model_attribution?: Record<string, any> | null;
+}
+
